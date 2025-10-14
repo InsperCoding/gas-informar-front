@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import bgi from "../assets/backgroundlogin2.jpg"
 import logoInformar from "../assets/logo.jpg"
@@ -101,7 +101,7 @@ export default function Login() {
             <img src={logoInformar} alt="Logo" className="w-64 object-contain" />
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
               <input
