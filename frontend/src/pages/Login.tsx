@@ -95,13 +95,13 @@ export default function Login() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          className="bg-white bg-opacity-95 rounded-xl shadow-md w-full max-w-sm px-8 py-6"
+          className="bg-white bg-opacity-95 rounded-xl shadow-md w-full max-w-sm px-8 py-10"
         >
           <div className="flex flex-row items-center justify-center gap-4 mb-6">
             <img src={logoInformar} alt="Logo" className="w-64 object-contain" />
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-1">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
               <input
@@ -125,16 +125,12 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="bg-[#083D77] text-white py-2 rounded-md font-semibold hover:bg-[#416B98] transition-colors disabled:opacity-50"
+              className="bg-[#083D77] text-white py-2 mt-6 rounded-md font-semibold hover:bg-[#416B98] transition-colors disabled:opacity-50"
             >
               {loading ? "Entrando…" : "Entrar"}
             </button>
 
             {error && <p className="text-red-600 text-sm text-center">{error}</p>}
-
-            <Link to="/esqueci-senha" className="text-sm text-[#083D77] text-center hover:underline">
-              Esqueci minha senha
-            </Link>
           </form>
         </motion.div>
       </div>
