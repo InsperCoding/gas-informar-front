@@ -5,10 +5,11 @@ import bgi from "../assets/backgroundlogin2.jpg"
 import logoInformar from "../assets/logo.jpg"
 import { API_URL } from "../config"
 
-interface TokenResponse {
-  access_token: string
-  token_type: string
-  user: { id: number; nome: string; email: string; role: string }
+interface MeResponse {
+  id: number
+  nome: string
+  email: string
+  role: string
 }
 
 export default function Login() {
@@ -25,23 +26,51 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const res = await fetch(`${API_URL}/usuarios/token`, {
+      // 1) Obter token
+      const tokenRes = await fetch(`${API_URL}/usuarios/token`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({ username, password }),
       })
 
-      if (!res.ok) {
-        const msg = (await res.json())?.detail ?? res.statusText
-        throw new Error(msg)
+      if (!tokenRes.ok) {
+        const payload = await tokenRes.json().catch(() => ({}))
+        const msg = (payload as any)?.detail ?? tokenRes.statusText
+        throw new Error(msg || "Erro ao autenticar")
       }
 
-      const json = (await res.json()) as TokenResponse
-      localStorage.setItem("token", json.access_token)
-      localStorage.setItem("user_id", String(json.user.id))
-      localStorage.setItem("user_role", json.user.role)
-      localStorage.setItem("user_name", json.user.nome)
+      const tokenJson = await tokenRes.json() as { access_token: string; token_type?: string; user?: MeResponse }
+      const token = tokenJson.access_token
+      if (!token) throw new Error("Token não retornado pelo servidor")
 
+      // salvar token imediatamente (para permitir /me)
+      localStorage.setItem("token", token)
+
+      // 2) Buscar informações do usuário usando /usuarios/me
+      //    Se seu backend já retorna `user` no token response, usamos esse objeto como fallback.
+      let me: MeResponse | null = null
+      if ((tokenJson as any).user) {
+        me = (tokenJson as any).user as MeResponse
+      } else {
+        const meRes = await fetch(`${API_URL}/usuarios/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!meRes.ok) {
+          // token inválido / problemas — limpar e lançar erro
+          localStorage.removeItem("token")
+          const payload = await meRes.json().catch(() => ({}))
+          const msg = (payload as any)?.detail ?? meRes.statusText
+          throw new Error(msg || "Falha ao obter usuário")
+        }
+        me = await meRes.json() as MeResponse
+      }
+
+      // 3) guardar dados do usuário (apenas dados mínimos)
+      localStorage.setItem("user_id", String(me.id))
+      localStorage.setItem("user_role", me.role)
+      localStorage.setItem("user_name", me.nome)
+
+      // redirecionar
       navigate("/dashboard", { replace: true })
     } catch (err) {
       setError((err as Error).message)
@@ -58,7 +87,6 @@ export default function Login() {
           alt="Background"
           className="w-full h-full object-cover filter blur-sm brightness-75"
         />
-        {/* Overlay translucent red */}
         <div className="absolute inset-0 bg-red-700 bg-opacity-40"></div>
       </div>
 
