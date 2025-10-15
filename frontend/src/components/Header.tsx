@@ -1,23 +1,21 @@
-import React from "react"
+import React, { useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import logo from "../assets/logo.jpg"
 import { logout } from "../lib/fetchWithAuth"
 
-// chaves usadas no localStorage pelo fetchWithAuth
 const USER_NAME_KEY = "user_name"
 const USER_ROLE_KEY = "user_role"
 
 export default function Header() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
-  // ler user a partir do localStorage (fallback se não houver contexto global)
   const user = {
     nome: localStorage.getItem(USER_NAME_KEY) || undefined,
     role: (localStorage.getItem(USER_ROLE_KEY) as string) || undefined,
   }
 
-  // tenta scrollar para o elemento com id="exercicios" (se existir)
   const scrollToExercicios = () => {
     setTimeout(() => {
       const el = document.getElementById("exercicios")
@@ -42,38 +40,46 @@ export default function Header() {
   }
 
   const handleLogout = () => {
-    // logout() já limpa localStorage e faz redirect
     logout(true)
   }
 
-  const role = user.role ?? "aluno"
+  const role = (user.role ?? "aluno").toLowerCase()
+
+  const capitalize = (s?: string) =>
+    s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ""
 
   return (
     <header className="w-full bg-white shadow-sm">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
-            <Link to="/">
-              <img src={logo} alt="Logo" className="h-12 w-auto object-contain" />
+            <Link to="/" onClick={() => setMobileOpen(false)}>
+              <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
             </Link>
+
+            {/* Nav desktop */}
             <nav className="hidden md:flex items-center gap-2">
-              <Link to="/aulas" className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+              <Link
+                to="/aulas"
+                onClick={() => setMobileOpen(false)}
+                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
+              >
                 Aulas
               </Link>
 
               <button
-                onClick={handleExerciciosClick}
-                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => { setMobileOpen(false); handleExerciciosClick() }}
+                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
               >
                 Exercícios
               </button>
 
               {role === "admin" && (
                 <>
-                  <Link to="/usuarios" className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                  <Link to="/usuarios" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
                     Usuários
                   </Link>
-                  <Link to="/relatorios" className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                  <Link to="/relatorios" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
                     Relatórios
                   </Link>
                 </>
@@ -81,57 +87,112 @@ export default function Header() {
 
               {role === "professor" && (
                 <>
-                  <Link
-                    to="/minhas-aulas"
-                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-                  >
+                  <Link to="/minhas-aulas" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
                     Minhas Aulas
                   </Link>
-                  <Link
-                    to="/desempenho"
-                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-                  >
+                  <Link to="/desempenho" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
                     Desempenho
                   </Link>
                 </>
               )}
 
               {role === "aluno" && (
-                <>
-                  <Link to="/minhas-respostas" className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
-                    Minhas Respostas
-                  </Link>
-                </>
+                <Link to="/minhas-respostas" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+                  Minhas Respostas
+                </Link>
               )}
             </nav>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="hidden md:flex flex-col text-right mr-4">
-              <span className="text-sm font-medium text-gray-700">{user.nome ?? "Visitante"}</span>
-              <span className="text-xs text-gray-500">{user.role ?? ""}</span>
+              <span className="text-sm font-medium text-gray-700">{user.nome ? capitalize(user.nome) : "Visitante"}</span>
+              <span className="text-xs text-gray-500">{capitalize(role)}</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <button
                 onClick={handleLogout}
-                className="bg-red-500 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-600"
+                className="bg-red-500 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-600 transition"
               >
                 Sair
               </button>
             </div>
 
-            <div className="md:hidden">
+            {/* Mobile: hamburger */}
+            <div className="md:hidden flex items-center">
               <button
-                onClick={() => {
-                  navigate("/aulas")
-                }}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100"
-                aria-expanded="false"
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100 transition"
+                aria-expanded={mobileOpen}
+                aria-label="Abrir menu"
               >
-                <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                {mobileOpen ? (
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu (slideover/dropdown) */}
+      <div className={`md:hidden bg-white border-t ${mobileOpen ? "block" : "hidden"}`}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-1">
+          <Link to="/aulas" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+            Aulas
+          </Link>
+
+          <button
+            onClick={() => { setMobileOpen(false); handleExerciciosClick() }}
+            className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition"
+          >
+            Exercícios
+          </button>
+
+          {role === "admin" && (
+            <>
+              <Link to="/usuarios" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+                Usuários
+              </Link>
+              <Link to="/relatorios" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+                Relatórios
+              </Link>
+            </>
+          )}
+
+          {role === "professor" && (
+            <>
+              <Link to="/minhas-aulas" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+                Minhas Aulas
+              </Link>
+              <Link to="/desempenho" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+                Desempenho
+              </Link>
+            </>
+          )}
+
+          {role === "aluno" && (
+            <Link to="/minhas-respostas" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+              Minhas Respostas
+            </Link>
+          )}
+
+          <div className="pt-2 border-t mt-2">
+            <div className="px-3">
+              <div className="text-sm font-medium text-gray-700">{user.nome ? capitalize(user.nome) : "Visitante"}</div>
+              <div className="text-xs text-gray-500 mb-2">{capitalize(role)}</div>
+              <button
+                onClick={() => { setMobileOpen(false); handleLogout() }}
+                className="w-full bg-red-500 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-600 transition"
+              >
+                Sair
               </button>
             </div>
           </div>
