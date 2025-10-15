@@ -49,12 +49,16 @@ export default function Header() {
     s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ""
 
   return (
-    <header className="w-full bg-white shadow-sm">
+    <header className="w-full bg-black shadow-sm">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
             <Link to="/" onClick={() => setMobileOpen(false)}>
-              <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
+              <img
+                src={logo}
+                alt="Logo"
+                className="h-10 w-auto object-contain rounded-md bg-white p-1"
+              />
             </Link>
 
             {/* Nav desktop */}
@@ -62,24 +66,35 @@ export default function Header() {
               <Link
                 to="/aulas"
                 onClick={() => setMobileOpen(false)}
-                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
+                className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
               >
                 Aulas
               </Link>
 
               <button
-                onClick={() => { setMobileOpen(false); handleExerciciosClick() }}
-                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
+                onClick={() => {
+                  setMobileOpen(false)
+                  handleExerciciosClick()
+                }}
+                className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
               >
                 Exercícios
               </button>
 
               {role === "admin" && (
                 <>
-                  <Link to="/usuarios" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+                  <Link
+                    to="/usuarios"
+                    onClick={() => setMobileOpen(false)}
+                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
+                  >
                     Usuários
                   </Link>
-                  <Link to="/relatorios" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+                  <Link
+                    to="/relatorios"
+                    onClick={() => setMobileOpen(false)}
+                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
+                  >
                     Relatórios
                   </Link>
                 </>
@@ -87,17 +102,29 @@ export default function Header() {
 
               {role === "professor" && (
                 <>
-                  <Link to="/minhas-aulas" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+                  <Link
+                    to="/minhas-aulas"
+                    onClick={() => setMobileOpen(false)}
+                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
+                  >
                     Minhas Aulas
                   </Link>
-                  <Link to="/desempenho" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+                  <Link
+                    to="/desempenho"
+                    onClick={() => setMobileOpen(false)}
+                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
+                  >
                     Desempenho
                   </Link>
                 </>
               )}
 
               {role === "aluno" && (
-                <Link to="/minhas-respostas" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+                <Link
+                  to="/minhas-respostas"
+                  onClick={() => setMobileOpen(false)}
+                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
+                >
                   Minhas Respostas
                 </Link>
               )}
@@ -106,14 +133,16 @@ export default function Header() {
 
           <div className="flex items-center gap-4">
             <div className="hidden md:flex flex-col text-right mr-4">
-              <span className="text-sm font-medium text-gray-700">{user.nome ? capitalize(user.nome) : "Visitante"}</span>
-              <span className="text-xs text-gray-500">{capitalize(role)}</span>
+              <span className="text-sm font-medium text-gray-100">
+                {user.nome ? capitalize(user.nome) : "Visitante"}
+              </span>
+              <span className="text-xs text-gray-400">{capitalize(role)}</span>
             </div>
 
             <div className="hidden md:flex items-center gap-2">
               <button
                 onClick={handleLogout}
-                className="bg-red-500 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-600 transition"
+                className="bg-red-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-700 transition"
               >
                 Sair
               </button>
@@ -123,17 +152,37 @@ export default function Header() {
             <div className="md:hidden flex items-center">
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100 transition"
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-200 hover:bg-gray-800 transition"
                 aria-expanded={mobileOpen}
                 aria-label="Abrir menu"
               >
                 {mobileOpen ? (
-                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-6 w-6"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 ) : (
-                  <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                  <svg
+                    className="h-6 w-6"
+                    stroke="currentColor"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
                   </svg>
                 )}
               </button>
@@ -142,26 +191,45 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile menu (slideover/dropdown) */}
-      <div className={`md:hidden bg-white border-t ${mobileOpen ? "block" : "hidden"}`}>
+      {/* Mobile menu */}
+      <div
+        className={`md:hidden bg-black border-t border-gray-800 ${
+          mobileOpen ? "block" : "hidden"
+        }`}
+      >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-1">
-          <Link to="/aulas" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+          <Link
+            to="/aulas"
+            onClick={() => setMobileOpen(false)}
+            className="block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:bg-gray-800 transition"
+          >
             Aulas
           </Link>
 
           <button
-            onClick={() => { setMobileOpen(false); handleExerciciosClick() }}
-            className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition"
+            onClick={() => {
+              setMobileOpen(false)
+              handleExerciciosClick()
+            }}
+            className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:bg-gray-800 transition"
           >
             Exercícios
           </button>
 
           {role === "admin" && (
             <>
-              <Link to="/usuarios" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+              <Link
+                to="/usuarios"
+                onClick={() => setMobileOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:bg-gray-800 transition"
+              >
                 Usuários
               </Link>
-              <Link to="/relatorios" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+              <Link
+                to="/relatorios"
+                onClick={() => setMobileOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:bg-gray-800 transition"
+              >
                 Relatórios
               </Link>
             </>
@@ -169,28 +237,45 @@ export default function Header() {
 
           {role === "professor" && (
             <>
-              <Link to="/minhas-aulas" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+              <Link
+                to="/minhas-aulas"
+                onClick={() => setMobileOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:bg-gray-800 transition"
+              >
                 Minhas Aulas
               </Link>
-              <Link to="/desempenho" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+              <Link
+                to="/desempenho"
+                onClick={() => setMobileOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:bg-gray-800 transition"
+              >
                 Desempenho
               </Link>
             </>
           )}
 
           {role === "aluno" && (
-            <Link to="/minhas-respostas" onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition">
+            <Link
+              to="/minhas-respostas"
+              onClick={() => setMobileOpen(false)}
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:bg-gray-800 transition"
+            >
               Minhas Respostas
             </Link>
           )}
 
-          <div className="pt-2 border-t mt-2">
+          <div className="pt-2 border-t border-gray-700 mt-2">
             <div className="px-3">
-              <div className="text-sm font-medium text-gray-700">{user.nome ? capitalize(user.nome) : "Visitante"}</div>
-              <div className="text-xs text-gray-500 mb-2">{capitalize(role)}</div>
+              <div className="text-sm font-medium text-gray-100">
+                {user.nome ? capitalize(user.nome) : "Visitante"}
+              </div>
+              <div className="text-xs text-gray-400 mb-2">{capitalize(role)}</div>
               <button
-                onClick={() => { setMobileOpen(false); handleLogout() }}
-                className="w-full bg-red-500 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-600 transition"
+                onClick={() => {
+                  setMobileOpen(false)
+                  handleLogout()
+                }}
+                className="w-full bg-red-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-700 transition"
               >
                 Sair
               </button>
