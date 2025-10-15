@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react"
 import { fetchJsonWithAuth, getToken } from "../lib/fetchWithAuth"
 import { API_URL } from "../config"
 import Header from "../components/Header"
+import { Link } from "react-router-dom"
 
 type User = {
   id: number
@@ -267,7 +268,8 @@ export default function UsuariosPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <Link to="/dashboard" className="text-sm text-gray-500 hover:underline">← Voltar para o dashboard</Link>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 mt-4">
           <div>
             <h1 className="text-2xl font-bold">Usuários</h1>
             <p className="text-sm text-gray-600">Lista de usuários do sistema</p>

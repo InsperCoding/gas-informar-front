@@ -345,8 +345,8 @@ export default function AulaDetail() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <Link to="/aulas" className="text-sm text-gray-500 hover:underline">← Voltar</Link>
-            <h1 className="text-2xl font-bold mt-2">{aula.titulo}</h1>
+            <Link to="/aulas" className="text-sm text-gray-500 hover:underline">← Voltar para aulas</Link>
+            <h1 className="text-2xl font-bold mt-4">{aula.titulo}</h1>
             {aula.descricao && <p className="mt-1 text-gray-600">{aula.descricao}</p>}
           </div>
 
