@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard"
 import Usuarios from "./pages/Usuarios"
 import Aulas from "./pages/Aulas"
 import AulaDetail from "./pages/AulaDetail"
+import DesempenhoPage from "./pages/Desempenho"
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/usuarios" element={<Usuarios />} /> 
         <Route path="/aulas" element={<Aulas />} />
         <Route path="/aulas/:id" element={<AulaDetail />} />
+        <Route path="/desempenho" element={<DesempenhoPage />} />
       </Routes>
     </BrowserRouter>
   )
