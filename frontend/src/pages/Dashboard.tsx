@@ -77,49 +77,36 @@ export default function Dashboard() {
         </div>
 
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Aulas */}
           <div className={cardBaseClasses}>
             <div>
               <h3 className="text-lg font-semibold">Aulas</h3>
               <p className="mt-2 text-sm text-gray-600">Ver todas as aulas disponíveis.</p>
             </div>
-            <Link to="/aulas" className={btnClasses}>
-              Ver Aulas
-            </Link>
+            <Link to="/aulas" className={btnClasses}>Ver Aulas</Link>
           </div>
 
-          {role === "professor" && (
-            <div className={cardBaseClasses}>
-              <div>
-                <h3 className="text-lg font-semibold">Minhas Aulas</h3>
-                <p className="mt-2 text-sm text-gray-600">Criar ou editar suas aulas.</p>
-              </div>
-              <Link to="/minhas-aulas" className={btnClasses}>
-                Gerenciar Aulas
-              </Link>
-            </div>
-          )}
-
+          {/* Usuários (admin) */}
           {role === "admin" && (
             <div className={cardBaseClasses}>
               <div>
                 <h3 className="text-lg font-semibold">Usuários</h3>
                 <p className="mt-2 text-sm text-gray-600">Gerenciar usuários do sistema.</p>
               </div>
-              <Link to="/usuarios" className={btnClasses}>
-                Gerenciar Usuários
-              </Link>
+              <Link to="/usuarios" className={btnClasses}>Gerenciar Usuários</Link>
             </div>
           )}
 
-          <div className={cardBaseClasses}>
-            <div>
-              <h3 className="text-lg font-semibold">Desempenho</h3>
-              <p className="mt-2 text-sm text-gray-600">Ver desempenho dos alunos (professores/admin).</p>
+          {/* Desempenho — SOMENTE para professor ou admin */}
+          {["professor", "admin"].includes(role) && (
+            <div className={cardBaseClasses}>
+              <div>
+                <h3 className="text-lg font-semibold">Desempenho</h3>
+                <p className="mt-2 text-sm text-gray-600">Ver desempenho dos alunos (professores/admin).</p>
+              </div>
+              <Link to="/desempenho" className={btnClasses}>Ver Desempenho</Link>
             </div>
-            <Link to="/desempenho" className={btnClasses}>
-              Ver Desempenho
-            </Link>
-          </div>
+          )}
         </section>
       </main>
     </div>
