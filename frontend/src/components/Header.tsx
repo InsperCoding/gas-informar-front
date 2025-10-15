@@ -53,7 +53,7 @@ export default function Header() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
-            <Link to="/" onClick={() => setMobileOpen(false)}>
+            <Link to="/dashboard" onClick={() => setMobileOpen(false)}>
               <img
                 src={logo}
                 alt="Logo"
@@ -71,16 +71,6 @@ export default function Header() {
                 Aulas
               </Link>
 
-              <button
-                onClick={() => {
-                  setMobileOpen(false)
-                  handleExerciciosClick()
-                }}
-                className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
-              >
-                Exercícios
-              </button>
-
               {role === "admin" && (
                 <>
                   <Link
@@ -89,25 +79,6 @@ export default function Header() {
                     className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
                   >
                     Usuários
-                  </Link>
-                  <Link
-                    to="/relatorios"
-                    onClick={() => setMobileOpen(false)}
-                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
-                  >
-                    Relatórios
-                  </Link>
-                </>
-              )}
-
-              {role === "professor" && (
-                <>
-                  <Link
-                    to="/minhas-aulas"
-                    onClick={() => setMobileOpen(false)}
-                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
-                  >
-                    Minhas Aulas
                   </Link>
                   <Link
                     to="/desempenho"
@@ -119,6 +90,18 @@ export default function Header() {
                 </>
               )}
 
+              {role === "professor" && (
+                <>
+                  <Link
+                    to="/desempenho"
+                    onClick={() => setMobileOpen(false)}
+                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-200 hover:bg-gray-800 transition"
+                  >
+                    Desempenho
+                  </Link>
+                </>
+              )}
+              {/* Plano de implementar */}
               {role === "aluno" && (
                 <Link
                   to="/minhas-respostas"
