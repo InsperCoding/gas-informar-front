@@ -89,6 +89,7 @@ export default function AulaDetail() {
   const [answerText, setAnswerText] = useState<Record<number, string>>({})
   const [submitting, setSubmitting] = useState<Record<number, boolean>>({})
   const [lastResult, setLastResult] = useState<Record<number, { pontuacao: number; mensagem?: string }>>({})
+  const [finalized, setFinalized] = useState<boolean>(false);
 
   const role = (localStorage.getItem(USER_ROLE_KEY) || "aluno").toLowerCase()
   const isAdmin = role === "admin"
@@ -288,6 +289,83 @@ export default function AulaDetail() {
     } catch (err) {
       console.error(err)
       alert("Erro ao deletar aula.")
+    }
+  }
+
+  async function handleEnviarTudo() {
+    if (!aula) return;
+    if (!confirm("Confirma finalizar a tentativa e enviar todas as respostas? Você não poderá alterar depois.")) return;
+
+    // opcional: bloquear UI
+    try {
+      // 1) enviar todas as respostas pendentes (uma requisição por exercício)
+      // montamos uma lista de exercícios para enviar
+      for (const ex of aula.exercicios || []) {
+        // se já existe uma resposta enviada localmente (opcional checar), aqui forçamos envio idempotente
+        // montar payload de acordo com o tipo
+        if (ex.tipo === "multiple_choice") {
+          const selIdx = selectedAlternative[ex.id];
+          // se usuário não selecionou nada, pulamos (ou enviamos vazio)
+          if (typeof selIdx === "undefined" || selIdx === null) {
+            // NÃO enviamos se não houver resposta
+            continue;
+          }
+          // localmente ex.alternativas é array de objetos com id/texto
+          const alt = (ex.alternativas || [])[selIdx];
+          if (!alt) continue;
+          const payload = { exercicio_id: ex.id, alternativa_id: alt.id };
+          await fetchJsonWithAuth(`${API_URL}/aulas/responder`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          const texto = (answerText[ex.id] ?? "").trim();
+          if (!texto) continue; // pular questões sem resposta
+          const payload = { exercicio_id: ex.id, resposta_texto: texto };
+          await fetchJsonWithAuth(`${API_URL}/aulas/responder`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        }
+      }
+
+      // 2) finalizar tentativa
+      const finalizeResp = await fetchJsonWithAuth(`${API_URL}/aulas/${aula.id}/finalizar`, { method: "POST" });
+      const totalPontuacao = finalizeResp?.pontuacao ?? 0;
+      alert(`Tentativa finalizada. Pontuação total: ${totalPontuacao}`);
+
+      // 3) buscar desempenho do próprio aluno para exibir pontuação por questão
+      const userIdStr = localStorage.getItem("user_id");
+      if (userIdStr) {
+        try {
+          const alunoIdNum = Number(userIdStr);
+          const detalhe = await fetchJsonWithAuth(`${API_URL}/aulas/${aula.id}/desempenho/${alunoIdNum}`);
+          // detalhe.responses -> array com pontuação por questão
+          const newLast: Record<number, { pontuacao: number; mensagem?: string }> = {};
+          detalhe.responses.forEach((r: any) => {
+            newLast[r.exercicio_id] = { pontuacao: r.pontuacao_obtida ?? 0, mensagem: r.acertou ? "Acertou" : "Errou" };
+          });
+          setLastResult(newLast);
+        } catch (e) {
+          // não crítico
+          console.warn("Não conseguiu buscar detalhe do aluno:", e);
+        }
+      }
+
+      // 4) marcar UI como finalizada
+      setFinalized(true);
+
+      // 5) recarregar aula para refletir qualquer atualização do backend
+      try {
+        const updated = await fetchJsonWithAuth(`${API_URL}/aulas/${aula.id}`);
+        setAula(updated);
+      } catch { /* ignore */ }
+
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.message ?? "Erro ao enviar ou finalizar tentativa. Tente novamente.");
     }
   }
 
@@ -575,15 +653,13 @@ export default function AulaDetail() {
                               </label>
                             )
                           })}
-                          <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                            <button
-                              onClick={() => submitAnswer(ex.id)}
-                              disabled={submitting[ex.id]}
-                              className="px-3 py-2 rounded bg-[#083D77] text-white hover:bg-[#062f63] transition w-full sm:w-auto"
-                            >
-                              {submitting[ex.id] ? "Enviando..." : "Enviar resposta"}
-                            </button>
-                            {lastResult[ex.id] && <div className="text-sm text-green-600">{lastResult[ex.id].mensagem}</div>}
+                          {/* controles simplificados: apenas mostrar feedback local (será preenchido após Enviar Tudo) */}
+                          <div className="mt-3">
+                            {lastResult[ex.id] ? (
+                              <div className="text-sm text-green-600">Pontuação: {lastResult[ex.id].pontuacao}</div>
+                            ) : (
+                              <div className="text-sm text-gray-400">Selecione a alternativa e finalize no bloco abaixo.</div>
+                            )}
                           </div>
                         </div>
                       )}
@@ -596,16 +672,10 @@ export default function AulaDetail() {
                             className="w-full border rounded px-3 py-2"
                             rows={4}
                           />
-                          <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                            <button
-                              onClick={() => submitAnswer(ex.id)}
-                              disabled={submitting[ex.id]}
-                              className="px-3 py-2 rounded bg-[#083D77] text-white hover:bg-[#062f63] transition w-full sm:w-auto"
-                            >
-                              {submitting[ex.id] ? "Enviando..." : "Enviar resposta"}
-                            </button>
-                            {lastResult[ex.id] && <div className="text-sm text-green-600">{lastResult[ex.id].mensagem}</div>}
+                          <div className="mt-2 text-sm text-gray-400">
+                            Sua resposta será enviada quando você clicar em <strong>Enviar tudo</strong>.
                           </div>
+                          {lastResult[ex.id] && <div className="mt-2 text-sm text-green-600">Pontuação: {lastResult[ex.id].pontuacao}</div>}
                         </div>
                       )}
                     </div>
@@ -613,6 +683,42 @@ export default function AulaDetail() {
                 </div>
               </section>
             )}
+
+            {!canEdit && (
+              <div className="mt-6 bg-white p-4 rounded shadow">
+                <h3 className="text-lg font-semibold mb-2">Finalizar tentativa</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Ao clicar em <strong>Enviar tudo</strong>, sua tentativa será finalizada e você não poderá mais alterar respostas.
+                </p>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleEnviarTudo}
+                    className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                    disabled={finalized}
+                  >
+                    {finalized ? "Finalizada" : "Enviar tudo"}
+                  </button>
+
+
+                  <button
+                    onClick={async () => {
+                      try {
+                        const updated = await fetchJsonWithAuth(`${API_URL}/aulas/${aula?.id}`);
+                        setAula(updated);
+                        alert("Dados recarregados.");
+                      } catch {
+                        alert("Erro ao recarregar.");
+                      }
+                    }}
+                    className="px-3 py-2 rounded border"
+                  >
+                    Recarregar
+                  </button>
+
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </main>
