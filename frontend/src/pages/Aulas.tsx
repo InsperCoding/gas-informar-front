@@ -62,14 +62,20 @@ function AulaModal({
     setLoading(true)
     try {
       if (isEdit && aulaToEdit) {
-        const payload = { titulo: titulo.trim(), descricao: descricao.trim(), blocos: [], exercicios: [] }
+        // enviar apenas os campos que mudaram — aqui só título/descrição
+        const payload: any = {}
+        if (titulo.trim() !== (aulaToEdit.titulo || "")) payload.titulo = titulo.trim()
+        // enviar descricao sempre (null -> vazio)
+        payload.descricao = descricao.trim() || null
+
         const updated: Aula = await fetchJsonWithAuth(`${API_URL}/aulas/${aulaToEdit.id}`, {
-          method: "PUT",
+          method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         })
         onSaved(updated, false)
       } else {
+        // criar: POST continua igual
         const payload = { titulo: titulo.trim(), descricao: descricao.trim(), blocos: [], exercicios: [] }
         const created: Aula = await fetchJsonWithAuth(`${API_URL}/aulas`, {
           method: "POST",

@@ -25,7 +25,14 @@ type ConteudoBlocoCreate = {
   imagem_url?: string | null
 }
 
+type AlternativaEditable = {
+  id?: number
+  texto: string
+  is_correta?: boolean
+}
+
 type ExercicioCreate = {
+  localId?: string
   id?: number
   titulo?: string | null
   enunciado: string
@@ -33,11 +40,11 @@ type ExercicioCreate = {
   resposta_modelo?: string | null
   pontos?: number
   ordem?: number
-  alternativas?: string[] | null
+  alternativas?: AlternativaEditable[] | null
   alternativas_certas?: number[] | null
 }
 
-type AlternativaFromServer = { id: number; texto: string; is_correta?: boolean }
+type AlternativaFromServer = { id?: number | string; texto: string; is_correta?: boolean }
 type ExercicioFromServer = {
   id: number
   titulo?: string | null
@@ -46,6 +53,7 @@ type ExercicioFromServer = {
   resposta_modelo?: string | null
   pontos?: number
   alternativas?: AlternativaFromServer[] | null
+  correct_alternativas?: (number | string)[] | null
   ordem?: number
 }
 
@@ -89,7 +97,8 @@ export default function AulaDetail() {
   const [answerText, setAnswerText] = useState<Record<number, string>>({})
   const [submitting, setSubmitting] = useState<Record<number, boolean>>({})
   const [lastResult, setLastResult] = useState<Record<number, { pontuacao: number; mensagem?: string }>>({})
-  const [finalized, setFinalized] = useState<boolean>(false);
+  const [finalized, setFinalized] = useState<boolean>(false)
+  const [totalScore, setTotalScore] = useState<number | null>(null)
 
   const role = (localStorage.getItem(USER_ROLE_KEY) || "aluno").toLowerCase()
   const isAdmin = role === "admin"
@@ -115,18 +124,31 @@ export default function AulaDetail() {
           }))
         )
 
+        // mapear alternativas do servidor para o formato editável
         setExercicios(
-          (data.exercicios || []).map((e: ExercicioFromServer, idx: number) => ({
-            id: e.id,
-            titulo: e.titulo ?? "",
-            enunciado: e.enunciado ?? "",
-            tipo: e.tipo === "multiple_choice" ? "multiple_choice" : "text",
-            resposta_modelo: e.resposta_modelo ?? "",
-            pontos: e.pontos ?? 1,
-            ordem: typeof e.ordem === "number" ? e.ordem : idx,
-            alternativas: e.alternativas ? e.alternativas.map((a) => a.texto) : [],
-            alternativas_certas: (e.alternativas || []).map((a, ai) => (a.is_correta ? ai : -1)).filter((n) => n >= 0) || [],
-          }))
+          (data.exercicios || []).map((e: ExercicioFromServer, idx: number) => {
+            const correctIdsRaw = (e as any).correct_alternativas || []
+            const correctIds = new Set((correctIdsRaw || []).map((c: any) => (c !== null && c !== undefined ? Number(c) : c)))
+
+            const alts: AlternativaEditable[] = (e.alternativas || []).map((a) => ({
+              id: typeof a.id !== "undefined" && a.id !== null ? Number(a.id) : undefined,
+              texto: a.texto,
+              // se o servidor informar is_correta ou correct_alternativas, preferir isso
+              is_correta: typeof a.is_correta !== "undefined" ? !!a.is_correta : (typeof a.id !== "undefined" && a.id !== null ? correctIds.has(Number(a.id)) : false),
+            }))
+            return {
+              localId: e.id ? `srv-${e.id}` : makeId(),
+              id: e.id,
+              titulo: e.titulo ?? "",
+              enunciado: e.enunciado ?? "",
+              tipo: e.tipo === "multiple_choice" ? "multiple_choice" : "text",
+              resposta_modelo: e.resposta_modelo ?? "",
+              pontos: e.pontos ?? 1,
+              ordem: typeof e.ordem === "number" ? e.ordem : idx,
+              alternativas: alts,
+              alternativas_certas: alts.map((a, ai) => (a.is_correta ? ai : -1)).filter((n) => n >= 0),
+            }
+          })
         )
       } catch (err: any) {
         console.error(err)
@@ -138,9 +160,6 @@ export default function AulaDetail() {
   }, [id])
 
   // blocos helpers
-  function makeId() {
-    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-  }
   function addBloco() {
     setBlocos((prev) => [...prev, { localId: makeId(), titulo: "", texto: "", ordem: prev.length }])
     setEditing(true)
@@ -159,13 +178,14 @@ export default function AulaDetail() {
     setExercicios((prev) => [
       ...prev,
       {
+        localId: makeId(),
         titulo: "",
         enunciado: "",
         tipo: type,
         resposta_modelo: "",
         pontos: 1,
         ordem: prev.length,
-        alternativas: type === "multiple_choice" ? ["", ""] : [],
+        alternativas: type === "multiple_choice" ? [{ texto: "" }, { texto: "" }] : [],
         alternativas_certas: [],
       },
     ])
@@ -179,16 +199,17 @@ export default function AulaDetail() {
     setExercicios((prev) => prev.filter((_, i) => i !== at))
     setEditing(true)
   }
+
   function addAlternative(exIdx: number) {
     setExercicios((prev) =>
-      prev.map((e, i) => (i === exIdx ? { ...e, alternativas: [...(e.alternativas ?? []), ""] } : e))
+      prev.map((e, i) => (i === exIdx ? { ...e, alternativas: [...(e.alternativas ?? []), { texto: "" }] } : e))
     )
     setEditing(true)
   }
   function updateAlternative(exIdx: number, altIdx: number, text: string) {
     setExercicios((prev) =>
       prev.map((e, i) =>
-        i === exIdx ? { ...e, alternativas: (e.alternativas ?? []).map((a, ai) => (ai === altIdx ? text : a)) } : e
+        i === exIdx ? { ...e, alternativas: (e.alternativas ?? []).map((a, ai) => (ai === altIdx ? { ...a, texto: text } : a)) } : e
       )
     )
     setEditing(true)
@@ -203,21 +224,21 @@ export default function AulaDetail() {
     setExercicios((prev) =>
       prev.map((e, i) => {
         if (i !== exIdx) return e
-        const current = new Set(e.alternativas_certas || [])
-        if (current.has(altIdx)) current.delete(altIdx)
-        else current.add(altIdx)
-        return { ...e, alternativas_certas: Array.from(current).sort((a, b) => a - b) }
+        // Permite múltiplas corretas — se quiser única, zere as outras antes de marcar
+        const alts = (e.alternativas ?? []).map((a, ai) => (ai === altIdx ? { ...a, is_correta: !a.is_correta } : a))
+        return { ...e, alternativas: alts, alternativas_certas: alts.map((a, ai) => (a.is_correta ? ai : -1)).filter((n) => n >= 0) }
       })
     )
     setEditing(true)
   }
 
-  // salvar via PUT
+  // salvar via PATCH
   async function handleSaveAll() {
     if (!aula) return
     setSaving(true)
     setError(null)
     try {
+      // construir payload convertendo alternativas para objetos { id?, texto, is_correta }
       const payload = {
         titulo: aula.titulo,
         descricao: aula.descricao ?? "",
@@ -228,27 +249,40 @@ export default function AulaDetail() {
           ordem: i,
           imagem_url: b.imagem_url ?? null,
         })),
-        exercicios: exercicios.map((ex, i) => ({
-          titulo: ex.titulo ?? undefined,
-          enunciado: ex.enunciado,
-          tipo: ex.tipo === "multiple_choice" ? "multiple_choice" : "text",
-          resposta_modelo: ex.resposta_modelo ?? undefined,
-          pontos: ex.pontos ?? 1,
-          ordem: i,
-          alternativas: ex.alternativas ?? [],
-          alternativas_certas: ex.alternativas_certas ?? [],
-        })),
+        exercicios: exercicios.map((ex, i) => {
+          const alternativasObjs = (ex.alternativas ?? []).map((a) => ({
+            ...(a.id ? { id: a.id } : {}),
+            texto: a.texto ?? "",
+            is_correta: !!a.is_correta,
+          }))
+          const corretasIndices = (ex.alternativas ?? []).map((a, ai) => (a.is_correta ? ai : -1)).filter((n) => n >= 0)
+          return {
+            ...(ex.id ? { id: ex.id } : {}),
+            titulo: ex.titulo ?? undefined,
+            enunciado: ex.enunciado,
+            tipo: ex.tipo === "multiple_choice" ? "multiple_choice" : "text",
+            resposta_modelo: ex.resposta_modelo ?? undefined,
+            pontos: ex.pontos ?? 1,
+            ordem: i,
+            alternativas: alternativasObjs,
+            alternativas_certas: corretasIndices,
+          }
+        }),
       }
+
       const updated = (await fetchJsonWithAuth(`${API_URL}/aulas/${aula.id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })) as AulaOut
 
+      // atualizar estado local a partir do retorno do backend
       setAula(updated)
 
       setBlocos(
         (updated.blocos || []).map((b: BlocoFromServer, idx: number) => ({
+          id: b.id,
+          localId: b.id ? `srv-${b.id}` : makeId(),
           titulo: b.titulo ?? "",
           texto: b.texto ?? "",
           ordem: typeof b.ordem === "number" ? b.ordem : idx,
@@ -257,17 +291,28 @@ export default function AulaDetail() {
       )
 
       setExercicios(
-        (updated.exercicios || []).map((e: ExercicioFromServer, idx: number) => ({
-          id: e.id,
-          titulo: e.titulo ?? "",
-          enunciado: e.enunciado ?? "",
-          tipo: e.tipo === "multiple_choice" ? "multiple_choice" : "text",
-          resposta_modelo: e.resposta_modelo ?? "",
-          pontos: e.pontos ?? 1,
-          ordem: typeof e.ordem === "number" ? e.ordem : idx,
-          alternativas: e.alternativas ? e.alternativas.map((a) => a.texto) : [],
-          alternativas_certas: (e.alternativas || []).map((a, ai) => (a.is_correta ? ai : -1)).filter((n) => n >= 0) || [],
-        }))
+        (updated.exercicios || []).map((e: ExercicioFromServer, idx: number) => {
+          const correctIdsRaw = (e as any).correct_alternativas || []
+          const correctIds = new Set((correctIdsRaw || []).map((c: any) => (c !== null && c !== undefined ? Number(c) : c)))
+
+          const alts: AlternativaEditable[] = (e.alternativas || []).map((a) => ({
+            id: typeof a.id !== "undefined" && a.id !== null ? Number(a.id) : undefined,
+            texto: a.texto ?? "",
+            is_correta: typeof a.is_correta !== "undefined" ? !!a.is_correta : (typeof a.id !== "undefined" && a.id !== null ? correctIds.has(Number(a.id)) : false),
+          }))
+          return {
+            localId: e.id ? `srv-${e.id}` : makeId(),
+            id: e.id,
+            titulo: e.titulo ?? "",
+            enunciado: e.enunciado ?? "",
+            tipo: e.tipo === "multiple_choice" ? "multiple_choice" : "text",
+            resposta_modelo: e.resposta_modelo ?? "",
+            pontos: e.pontos ?? 1,
+            ordem: typeof e.ordem === "number" ? e.ordem : idx,
+            alternativas: alts,
+            alternativas_certas: alts.map((a, ai) => (a.is_correta ? ai : -1)).filter((n) => n >= 0) || [],
+          }
+        })
       )
 
       setEditing(false)
@@ -296,24 +341,16 @@ export default function AulaDetail() {
     if (!aula) return;
     if (!confirm("Confirma finalizar a tentativa e enviar todas as respostas? Você não poderá alterar depois.")) return;
 
-    // opcional: bloquear UI
     try {
-      // 1) enviar todas as respostas pendentes (uma requisição por exercício)
-      // montamos uma lista de exercícios para enviar
       for (const ex of aula.exercicios || []) {
-        // se já existe uma resposta enviada localmente (opcional checar), aqui forçamos envio idempotente
-        // montar payload de acordo com o tipo
         if (ex.tipo === "multiple_choice") {
           const selIdx = selectedAlternative[ex.id];
-          // se usuário não selecionou nada, pulamos (ou enviamos vazio)
-          if (typeof selIdx === "undefined" || selIdx === null) {
-            // NÃO enviamos se não houver resposta
-            continue;
-          }
-          // localmente ex.alternativas é array de objetos com id/texto
+          if (typeof selIdx === "undefined" || selIdx === null) continue;
           const alt = (ex.alternativas || [])[selIdx];
           if (!alt) continue;
-          const payload = { exercicio_id: ex.id, alternativa_id: alt.id };
+          const altIdNum = typeof (alt as any).id !== "undefined" && (alt as any).id !== null ? Number((alt as any).id) : null
+          if (altIdNum === null) continue;
+          const payload = { exercicio_id: ex.id, alternativa_id: altIdNum };
           await fetchJsonWithAuth(`${API_URL}/aulas/responder`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -321,7 +358,7 @@ export default function AulaDetail() {
           });
         } else {
           const texto = (answerText[ex.id] ?? "").trim();
-          if (!texto) continue; // pular questões sem resposta
+          if (!texto) continue;
           const payload = { exercicio_id: ex.id, resposta_texto: texto };
           await fetchJsonWithAuth(`${API_URL}/aulas/responder`, {
             method: "POST",
@@ -331,33 +368,28 @@ export default function AulaDetail() {
         }
       }
 
-      // 2) finalizar tentativa
       const finalizeResp = await fetchJsonWithAuth(`${API_URL}/aulas/${aula.id}/finalizar`, { method: "POST" });
       const totalPontuacao = finalizeResp?.pontuacao ?? 0;
+      setTotalScore(totalPontuacao);
       alert(`Tentativa finalizada. Pontuação total: ${totalPontuacao}`);
 
-      // 3) buscar desempenho do próprio aluno para exibir pontuação por questão
       const userIdStr = localStorage.getItem("user_id");
       if (userIdStr) {
         try {
           const alunoIdNum = Number(userIdStr);
           const detalhe = await fetchJsonWithAuth(`${API_URL}/aulas/${aula.id}/desempenho/${alunoIdNum}`);
-          // detalhe.responses -> array com pontuação por questão
           const newLast: Record<number, { pontuacao: number; mensagem?: string }> = {};
           detalhe.responses.forEach((r: any) => {
             newLast[r.exercicio_id] = { pontuacao: r.pontuacao_obtida ?? 0, mensagem: r.acertou ? "Acertou" : "Errou" };
           });
           setLastResult(newLast);
         } catch (e) {
-          // não crítico
           console.warn("Não conseguiu buscar detalhe do aluno:", e);
         }
       }
 
-      // 4) marcar UI como finalizada
       setFinalized(true);
 
-      // 5) recarregar aula para refletir qualquer atualização do backend
       try {
         const updated = await fetchJsonWithAuth(`${API_URL}/aulas/${aula.id}`);
         setAula(updated);
@@ -369,7 +401,7 @@ export default function AulaDetail() {
     }
   }
 
-  // responder exercício
+  // responder exercício (envio único)
   async function submitAnswer(exercicio_id: number) {
     setSubmitting((s) => ({ ...s, [exercicio_id]: true }))
     setError(null)
@@ -384,7 +416,9 @@ export default function AulaDetail() {
         }
         const alternativaObj = ex.alternativas ? ex.alternativas[altIndex] : undefined
         if (!alternativaObj) throw new Error("Alternativa inválida")
-        const payload = { exercicio_id, alternativa_id: alternativaObj.id }
+        const altIdNum = typeof (alternativaObj as any).id !== "undefined" && (alternativaObj as any).id !== null ? Number((alternativaObj as any).id) : null
+        if (altIdNum === null) throw new Error("Alternativa sem id no servidor")
+        const payload = { exercicio_id, alternativa_id: altIdNum }
         const resp: RespostaOut = await fetchJsonWithAuth(`${API_URL}/aulas/responder`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -454,6 +488,7 @@ export default function AulaDetail() {
 
         {editing ? (
           <div className="space-y-6">
+            {/* EDIT MODE (conteúdo + edição de exercícios) */}
             <section className="bg-white p-4 rounded shadow">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Blocos</h2>
@@ -463,7 +498,6 @@ export default function AulaDetail() {
               <div className="mt-4 space-y-4">
                 {blocos.map((b, i) => (
                   <div key={b.localId} className="border rounded p-3">
-                    {/* layout responsivo: coluna em mobile, row em sm+ */}
                     <div className="flex flex-col sm:flex-row gap-4">
                       <div className="flex-1">
                         <label className="text-sm font-medium">Título</label>
@@ -472,21 +506,18 @@ export default function AulaDetail() {
                         <label className="text-sm font-medium mt-2">Texto (HTML permitido)</label>
                         <textarea value={b.texto ?? ""} onChange={(e) => updateBloco(i, { texto: e.target.value })} className="mt-1 block w-full border rounded px-3 py-2" rows={4} />
                       </div>
-                      {/* coluna da imagem: use grid para alinhar com os labels da parte principal */}
+
                       <div className="w-full sm:w-48 flex-shrink-0">
                         <div className="mt-2">
                           <label className="text-sm font-medium block">Imagem (opcional)</label>
 
-                          {/* Container do preview / input — mantém a largura controlada */}
                           <div className="mt-2 flex flex-col items-center sm:items-stretch gap-2">
                             {b.imagem_url ? (
                               <>
-                                {/* preview com ratio fixo e overflow controlado */}
                                 <div className="w-full sm:w-44 h-36 sm:h-28 rounded overflow-hidden border">
                                   <img src={b.imagem_url} alt={`Bloco ${i}`} className="w-full h-full object-cover" />
                                 </div>
 
-                                {/* botão alinhado diretamente abaixo do preview (sem sair do card) */}
                                 <button
                                   type="button"
                                   onClick={() => updateBloco(i, { imagem_url: undefined })}
@@ -522,7 +553,6 @@ export default function AulaDetail() {
                       </div>
                     </div>
 
-                    {/* Botão remover bloco em bottom (full width em mobile) */}
                     <div className="mt-4 flex justify-end">
                       <button onClick={() => removeBloco(i)} className="px-3 py-2 rounded bg-red-50 text-red-700 w-full sm:w-auto">Remover Bloco</button>
                     </div>
@@ -542,8 +572,7 @@ export default function AulaDetail() {
 
               <div className="mt-4 space-y-4">
                 {exercicios.map((ex, i) => (
-                  <div key={i} className="border rounded p-3">
-                    {/* form responsivo: conteúdo e ações empilhados em mobile */}
+                  <div key={ex.localId} className="border rounded p-3">
                     <div className="flex flex-col sm:flex-row items-start gap-4">
                       <div className="flex-1">
                         <label className="text-sm font-medium">Título (opcional)</label>
@@ -577,17 +606,20 @@ export default function AulaDetail() {
                           <div className="mt-3">
                             <label className="text-sm font-medium">Alternativas</label>
                             <div className="mt-2 space-y-2">
-                              {(ex.alternativas ?? []).map((alt, ai) => (
-                                <div key={ai} className="flex flex-col sm:flex-row items-center gap-2">
-                                  <input value={alt} onChange={(e) => updateAlternative(i, ai, e.target.value)} className="flex-1 border rounded px-3 py-2" />
-                                  <div className="flex gap-2">
-                                    <button onClick={() => toggleAlternativeCorrect(i, ai)} type="button" className={`px-3 py-1 rounded ${ex.alternativas_certas?.includes(ai) ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-700"}`}>
-                                      {ex.alternativas_certas?.includes(ai) ? "Certa" : "Marcar"}
-                                    </button>
-                                    <button onClick={() => removeAlternative(i, ai)} type="button" className="px-3 py-1 rounded bg-red-50 text-red-700">Remover</button>
+                              {(ex.alternativas ?? []).map((alt, ai) => {
+                                const key = alt.id ? `alt-${alt.id}` : `${ex.localId}-alt-${ai}`
+                                return (
+                                  <div key={key} className="flex flex-col sm:flex-row items-center gap-2">
+                                    <input value={alt.texto ?? ""} onChange={(e) => updateAlternative(i, ai, e.target.value)} className="flex-1 border rounded px-3 py-2" />
+                                    <div className="flex gap-2 items-center">
+                                      <button onClick={() => toggleAlternativeCorrect(i, ai)} type="button" className={`px-3 py-1 rounded ${alt.is_correta ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-700"}`}>
+                                        {alt.is_correta ? "Certa" : "Marcar"}
+                                      </button>
+                                      <button onClick={() => removeAlternative(i, ai)} type="button" className="px-3 py-1 rounded bg-red-50 text-red-700">Remover</button>
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                )
+                              })}
                               <div>
                                 <button onClick={() => addAlternative(i)} type="button" className="px-3 py-1 rounded border">Adicionar alternativa</button>
                               </div>
@@ -639,9 +671,14 @@ export default function AulaDetail() {
                       {ex.tipo === "multiple_choice" && ex.alternativas && (
                         <div className="mt-3 space-y-2">
                           {ex.alternativas.map((alt, ai) => {
+                            // alternativa do servidor pode ser { id?, texto, is_correta? } ou string (edge-case)
+                            const altId = typeof alt.id !== "undefined" && alt.id !== null ? Number(alt.id) : null
+                            const texto = alt.texto ?? String((alt as any) ?? "")
+                            const isCorreta = typeof alt.is_correta !== "undefined" ? !!alt.is_correta : false
+
                             const selected = selectedAlternative[ex.id] === ai
                             return (
-                              <label key={alt.id} className="flex items-center gap-3 p-2 rounded hover:bg-gray-50">
+                              <label key={altId !== null ? `alt-${altId}` : `${ex.id}-alt-${ai}`} className="flex items-center gap-3 p-2 rounded hover:bg-gray-50">
                                 <input
                                   type="radio"
                                   name={`ex-${ex.id}`}
@@ -649,11 +686,14 @@ export default function AulaDetail() {
                                   onChange={() => setSelectedAlternative((s) => ({ ...s, [ex.id]: ai }))}
                                   className="w-4 h-4"
                                 />
-                                <span className="text-sm">{alt.texto}</span>
+                                <span className="text-sm">{texto}</span>
+                                {/* mostrar badge de 'Certa' apenas para professores/admins */}
+                                {(isAdmin || isProfessor) && isCorreta && (
+                                  <span className="ml-3 inline-block text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Certa</span>
+                                )}
                               </label>
                             )
                           })}
-                          {/* controles simplificados: apenas mostrar feedback local (será preenchido após Enviar Tudo) */}
                           <div className="mt-3">
                             {lastResult[ex.id] ? (
                               <div className="text-sm text-green-600">Pontuação: {lastResult[ex.id].pontuacao}</div>
@@ -691,30 +731,37 @@ export default function AulaDetail() {
                   Ao clicar em <strong>Enviar tudo</strong>, sua tentativa será finalizada e você não poderá mais alterar respostas.
                 </p>
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleEnviarTudo}
-                    className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
-                    disabled={finalized}
-                  >
-                    {finalized ? "Finalizada" : "Enviar tudo"}
-                  </button>
+                  {!finalized ? (
+                    <>
+                      <button
+                        onClick={handleEnviarTudo}
+                        className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                      >
+                        Enviar tudo
+                      </button>
 
-
-                  <button
-                    onClick={async () => {
-                      try {
-                        const updated = await fetchJsonWithAuth(`${API_URL}/aulas/${aula?.id}`);
-                        setAula(updated);
-                        alert("Dados recarregados.");
-                      } catch {
-                        alert("Erro ao recarregar.");
-                      }
-                    }}
-                    className="px-3 py-2 rounded border"
-                  >
-                    Recarregar
-                  </button>
-
+                      <button
+                        onClick={async () => {
+                          try {
+                            const updated = await fetchJsonWithAuth(`${API_URL}/aulas/${aula?.id}`);
+                            setAula(updated);
+                            alert("Dados recarregados.");
+                          } catch {
+                            alert("Erro ao recarregar.");
+                          }
+                        }}
+                        className="px-3 py-2 rounded border"
+                      >
+                        Recarregar
+                      </button>
+                    </>
+                  ) : (
+                    // quando finalizada: mostra apenas pontuação total (para aluno)
+                    <div className="text-sm">
+                      <div className="font-semibold text-green-700">Tentativa finalizada</div>
+                      <div className="mt-1">Pontuação total: <span className="font-medium">{totalScore ?? "—"}</span></div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
