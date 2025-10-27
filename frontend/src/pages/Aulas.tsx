@@ -199,7 +199,7 @@ export default function AulasPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link to="/dashboard" className="text-sm text-gray-500 hover:underline">← Voltar para o dashboard</Link>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 mt-4">
           <div>

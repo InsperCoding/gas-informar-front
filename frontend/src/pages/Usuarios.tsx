@@ -335,7 +335,7 @@ export default function UsuariosPage() {
                 <div>
                   <h3 className="text-lg font-semibold">{capitalize(u.nome)}</h3>
                   <p className="text-sm text-gray-500">{u.email}</p>
-                  <div className="mt-2 text-xs text-gray-400">Role: {capitalize(u.role)}</div>
+                  <div className="mt-2 text-xs text-gray-400">ID: {u.id}</div>
                 </div>
 
                 <div className="mt-4 flex items-center gap-2">
