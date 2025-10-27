@@ -171,7 +171,7 @@ function UserModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700">{isEdit ? "Senha (opcional)" : "Senha"}</label>
-            <input value={senha} onChange={(e) => setSenha(e.target.value)} type="password" className="mt-1 block w-full border rounded px-3 py-2" />
+            <input value={senha} onChange={(e) => setSenha(e.target.value)} className="mt-1 block w-full border rounded px-3 py-2" />
             {isEdit && <div className="text-xs text-gray-400 mt-1">Deixe em branco para manter a senha atual.</div>}
           </div>
 
@@ -255,14 +255,34 @@ export default function UsuariosPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetchJsonWithAuth(`${API_URL}/usuarios/${id}`, { method: "DELETE" })
-      setUsers((prev) => prev.filter((x) => x.id !== id))
-      setConfirmDelete(null)
-    } catch (err) {
+      const token = getToken()
+      const resp = await fetch(`${API_URL}/usuarios/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+          // se o backend requer Content-Type mesmo em DELETE, pode adicionar: "Content-Type": "application/json"
+        },
+      })
+
+      if (resp.ok) {
+        // 200, 202, 204 etc -> remover localmente
+        setUsers((prev) => prev.filter((x) => x.id !== id))
+        setConfirmDelete(null)
+      } else {
+        // tenta extrair mensagem de erro do corpo (caso exista)
+        let msg = `Erro ao deletar usuário (status ${resp.status})`
+        try {
+          const txt = await resp.text()
+          if (txt) msg += `: ${txt}`
+        } catch {}
+        throw new Error(msg)
+      }
+    } catch (err: any) {
       console.error(err)
-      alert("Erro ao deletar usuário. Verifique se o backend tem endpoint DELETE /usuarios/{id}.")
+      alert("Erro ao deletar usuário. Verifique se o backend tem endpoint DELETE /usuarios/{id}.\n\nDetalhe: " + (err?.message ?? err))
     }
   }
+
 
   return (
     <div className="min-h-screen bg-gray-50">
