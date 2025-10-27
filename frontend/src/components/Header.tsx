@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import logo from "../assets/logo.jpg"
+// import logo from "../assets/logo.jpg"
+import logo from "../assets/Informar.png"
 import { logout } from "../lib/fetchWithAuth"
 
 const USER_NAME_KEY = "user_name"
@@ -57,7 +58,7 @@ export default function Header() {
               <img
                 src={logo}
                 alt="Logo"
-                className="h-10 w-auto object-contain rounded-md bg-white p-1"
+                className="h-20 w-auto"
               />
             </Link>
 
