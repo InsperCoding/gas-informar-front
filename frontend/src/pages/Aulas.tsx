@@ -10,6 +10,7 @@ type Aula = {
   titulo: string
   descricao?: string | null
   autor_id?: number
+  autor_nome?: string | null
   created_at?: string
 }
 
@@ -248,6 +249,11 @@ export default function AulasPage() {
                 >
                   <div className="text-lg font-semibold">Aula: {a.titulo}</div>
                   {a.descricao && <div className="mt-1 text-sm text-gray-500">{a.descricao}</div>}
+                  {(a.autor_nome || a.autor_id) && (
+                    <div className="mt-4 text-sm text-gray-400">
+                      Criada por: {a.autor_nome ? capitalize(a.autor_nome) : `ID ${a.autor_id}`}
+                    </div>
+                  )}
                 </Link>
 
                 {/* ações (edit/delete) à direita */}
