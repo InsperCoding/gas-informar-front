@@ -16,6 +16,38 @@ function absUrl(u?: string) {
   return `${API_URL.replace(/\/$/, "")}${u.startsWith("/") ? "" : "/"}${u}`
 }
 
+function extractYouTubeId(urlOrId?: string | null) {
+  if (!urlOrId) return null
+  const s = urlOrId.trim()
+
+  // já é só o id (11 chars) — heurística
+  if (/^[A-Za-z0-9_-]{11}$/.test(s)) return s
+
+  // tentar extrair de URLs comuns
+  try {
+    const u = new URL(s.includes("://") ? s : `https://${s}`)
+    // v param
+    if (u.searchParams.has("v")) return u.searchParams.get("v")
+    // youtu.be short
+    if (u.hostname.includes("youtu.be")) {
+      const p = u.pathname.split("/").filter(Boolean)
+      if (p.length > 0) return p[0]
+    }
+    // /embed/{id}
+    const m = u.pathname.match(/\/(embed|v)\/([A-Za-z0-9_-]{11})/)
+    if (m) return m[2]
+  } catch (e) {
+    // não é URL, cairá no retorno null
+  }
+  return null
+}
+
+function youtubeEmbedUrl(urlOrId?: string | null) {
+  const id = extractYouTubeId(urlOrId)
+  return id ? `https://www.youtube.com/embed/${id}` : null
+}
+
+
 type ConteudoBlocoCreate = {
   id?: number
   localId?: string
@@ -23,6 +55,7 @@ type ConteudoBlocoCreate = {
   texto?: string | null
   ordem?: number
   imagem_url?: string | null
+  youtube_url?: string | null 
 }
 
 type AlternativaEditable = {
@@ -57,7 +90,7 @@ type ExercicioFromServer = {
   ordem?: number
 }
 
-type BlocoFromServer = { id: number; titulo?: string | null; texto?: string | null; ordem?: number; imagem_url?: string | null }
+type BlocoFromServer = { id: number; titulo?: string | null; texto?: string | null; ordem?: number; imagem_url?: string | null;youtube_url?: string | null }
 
 type AulaOut = {
   id: number
@@ -121,6 +154,7 @@ export default function AulaDetail() {
             texto: b.texto ?? "",
             ordem: typeof b.ordem === "number" ? b.ordem : idx,
             imagem_url: b.imagem_url ? absUrl(b.imagem_url) : undefined,
+            youtube_url: b.youtube_url ?? undefined,
           }))
         )
 
@@ -248,6 +282,7 @@ export default function AulaDetail() {
           texto: b.texto ?? "",
           ordem: i,
           imagem_url: b.imagem_url ?? null,
+          youtube_url: b.youtube_url ?? null,
         })),
         exercicios: exercicios.map((ex, i) => {
           const alternativasObjs = (ex.alternativas ?? []).map((a) => ({
@@ -287,6 +322,7 @@ export default function AulaDetail() {
           texto: b.texto ?? "",
           ordem: typeof b.ordem === "number" ? b.ordem : idx,
           imagem_url: b.imagem_url ?? undefined,
+          youtube_url: b.youtube_url ?? undefined,
         }))
       )
 
@@ -504,12 +540,12 @@ export default function AulaDetail() {
                         <input value={b.titulo ?? ""} onChange={(e) => updateBloco(i, { titulo: e.target.value })} className="mt-1 block w-full border rounded px-3 py-2" />
 
                         <label className="text-sm font-medium mt-2">Texto (HTML permitido)</label>
-                        <textarea value={b.texto ?? ""} onChange={(e) => updateBloco(i, { texto: e.target.value })} className="mt-1 block w-full border rounded px-3 py-2" rows={4} />
+                        <textarea value={b.texto ?? ""} onChange={(e) => updateBloco(i, { texto: e.target.value })} className="mt-1 block w-full border rounded px-3 py-2" rows={5} />
                       </div>
 
                       <div className="w-full sm:w-48 flex-shrink-0">
                         <div className="mt-2">
-                          <label className="text-sm font-medium block">Imagem (opcional)</label>
+                          <label className="text-sm font-medium block">Imagem - opcional</label>
 
                           <div className="mt-2 flex flex-col items-center sm:items-stretch gap-2">
                             {b.imagem_url ? (
@@ -549,6 +585,31 @@ export default function AulaDetail() {
                               </>
                             )}
                           </div>
+                        </div>
+                        {/* Campo YouTube */}
+                        <div className="mt-3">
+                          <label className="text-sm font-medium block">YouTube (URL ou ID) - opcional</label>
+                          <input
+                            value={b.youtube_url ?? ""}
+                            onChange={(e) => updateBloco(i, { youtube_url: e.target.value })}
+                            placeholder="https://youtu.be/XXXX ou https://www.youtube.com/watch?v=XXXX ou apenas o ID"
+                            className="mt-1 block w-full border rounded px-3 py-2 text-sm"
+                          />
+                          <div className="text-xs text-gray-400 mt-1">Cole a URL do YouTube ou apenas o ID do vídeo. Será exibido um player embutido.</div>
+
+                          {/* preview do embed local enquanto edita */}
+                          {youtubeEmbedUrl(b.youtube_url) && (
+                            <div className="mt-2 w-full aspect-video rounded overflow-hidden border">
+                              <iframe
+                                src={youtubeEmbedUrl(b.youtube_url)!}
+                                title={`youtube-preview-${b.localId}`}
+                                className="w-full h-full"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -650,6 +711,20 @@ export default function AulaDetail() {
                       {b.imagem_url && (
                         <div className="mt-3">
                           <img src={b.imagem_url} alt={b.titulo ?? "Imagem do bloco"} className="w-full max-h-80 object-cover rounded" />
+                        </div>
+                      )}
+                      {b.youtube_url && youtubeEmbedUrl(b.youtube_url) && (
+                        <div className="mt-3">
+                          <div className="w-full aspect-video rounded overflow-hidden border">
+                            <iframe
+                              src={youtubeEmbedUrl(b.youtube_url)!}
+                              title={`youtube-${b.id}`}
+                              className="w-full h-full"
+                              frameBorder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          </div>
                         </div>
                       )}
                       {b.texto && <div className="mt-2 text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: b.texto ?? "" }} />}
