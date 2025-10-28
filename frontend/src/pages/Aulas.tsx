@@ -12,6 +12,7 @@ type Aula = {
   autor_id?: number
   autor_nome?: string | null
   created_at?: string
+  category?: string | null
 }
 
 const USER_ROLE_KEY = "user_role"
@@ -20,7 +21,7 @@ function capitalize(s?: string) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ""
 }
 
-/* Modal de criar/editar aula (titulo + descricao; blocos/exercicios vazios por enquanto) */
+/* Modal de criar/editar aula (titulo + descricao + category) */
 function AulaModal({
   open,
   onClose,
@@ -35,6 +36,8 @@ function AulaModal({
   const isEdit = !!aulaToEdit
   const [titulo, setTitulo] = useState("")
   const [descricao, setDescricao] = useState("")
+  // category: "" => pública
+  const [category, setCategory] = useState<string>("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -42,11 +45,13 @@ function AulaModal({
     if (open && aulaToEdit) {
       setTitulo(aulaToEdit.titulo || "")
       setDescricao(aulaToEdit.descricao || "")
+      setCategory(aulaToEdit.category ?? "")
       setError(null)
     }
     if (!open && !aulaToEdit) {
       setTitulo("")
       setDescricao("")
+      setCategory("")
       setError(null)
     }
   }, [open, aulaToEdit])
@@ -63,11 +68,23 @@ function AulaModal({
     setLoading(true)
     try {
       if (isEdit && aulaToEdit) {
-        // enviar apenas os campos que mudaram — aqui só título/descrição
+        // enviar apenas os campos que mudaram — título/descrição/category
         const payload: any = {}
         if (titulo.trim() !== (aulaToEdit.titulo || "")) payload.titulo = titulo.trim()
-        // enviar descricao sempre (null -> vazio)
-        payload.descricao = descricao.trim() || null
+        // enviar descricao explicitamente (null -> vazio)
+        if ((descricao.trim() || null) !== (aulaToEdit.descricao ?? null)) {
+          payload.descricao = descricao.trim() || null
+        }
+        // category: normalize empty string => null (pública)
+        const newCat = category === "" ? null : category
+        const oldCat = aulaToEdit.category ?? null
+        if (newCat !== oldCat) payload.category = newCat
+
+        // se não houver mudanças, apenas fecha
+        if (Object.keys(payload).length === 0) {
+          onClose()
+          return
+        }
 
         const updated: Aula = await fetchJsonWithAuth(`${API_URL}/aulas/${aulaToEdit.id}`, {
           method: "PATCH",
@@ -76,8 +93,14 @@ function AulaModal({
         })
         onSaved(updated, false)
       } else {
-        // criar: POST continua igual
-        const payload = { titulo: titulo.trim(), descricao: descricao.trim(), blocos: [], exercicios: [] }
+        // criar: enviar category (null => pública)
+        const payload = {
+          titulo: titulo.trim(),
+          descricao: descricao.trim() || null,
+          blocos: [],
+          exercicios: [],
+          category: category === "" ? null : category,
+        }
         const created: Aula = await fetchJsonWithAuth(`${API_URL}/aulas`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -118,6 +141,20 @@ function AulaModal({
               className="mt-1 block w-full border rounded px-3 py-2"
               rows={4}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Categoria / Turma</label>
+            <select
+              value={category ?? ""}
+              onChange={(e) => setCategory(e.target.value)}
+              className="mt-1 block w-full border rounded px-3 py-2"
+            >
+              <option value="">Pública (todas as turmas)</option>
+              <option value="Python">Python</option>
+              <option value="WebDev">WebDev</option>
+            </select>
+            <p className="text-xs text-gray-400 mt-1">Escolha a turma que poderá ver a aula. Apenas admins/professores verão todas as aulas.</p>
           </div>
 
           <div className="flex justify-end gap-2 pt-3">
@@ -247,11 +284,17 @@ export default function AulasPage() {
                   className="block w-full px-6 py-6 text-left"
                   onClick={() => { /* navigate handled by Link */ }}
                 >
-                  <div className="text-lg font-semibold">Aula: {a.titulo}</div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-lg font-semibold">Aula: {a.titulo}</div>
+                    <div className="ml-3 text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                      {a.category ? (a.category) : "Pública"}
+                    </div>
+                  </div>
+
                   {a.descricao && <div className="mt-1 text-sm text-gray-500">{a.descricao}</div>}
                   {(a.autor_nome || a.autor_id) && (
                     <div className="mt-4 text-sm text-gray-400">
-                      Criada por: {a.autor_nome ? capitalize(a.autor_nome) : `ID ${a.autor_id}`}
+                      Criada por: {a.autor_nome ? capitalize(a.autor_nome) : `Usuário #${a.autor_id}`}
                     </div>
                   )}
                 </Link>
