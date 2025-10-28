@@ -350,7 +350,7 @@ export default function UsuariosPage() {
         {!loading && !error && filteredUsers.length > 0 && (
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
             {filteredUsers.map((u) => (
-              <div key={u.id} className="relative bg-white rounded-lg shadow p-6 flex flex-col justify-between h-auto md:h-56">
+              <div key={u.id} className="relative bg-white rounded-lg shadow p-6 flex flex-col justify-between h-auto md:h-52">
                 <RoleBadge role={u.role} />
                 <div>
                   <h3 className="text-lg font-semibold">{capitalize(u.nome)}</h3>
