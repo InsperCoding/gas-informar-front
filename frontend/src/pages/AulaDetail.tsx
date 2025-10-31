@@ -799,7 +799,8 @@ export default function AulaDetail() {
               </section>
             )}
 
-            {!canEdit && (
+            {/* mostrar botão "Enviar tudo" apenas se o usuário não puder editar e existirem exercícios */}
+            {!canEdit && aula.exercicios && aula.exercicios.length > 0 && (
               <div className="mt-6 bg-white p-4 rounded shadow">
                 <h3 className="text-lg font-semibold mb-2">Finalizar tentativa</h3>
                 <p className="text-sm text-gray-600 mb-3">

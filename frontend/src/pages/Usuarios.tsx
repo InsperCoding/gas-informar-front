@@ -53,11 +53,6 @@ function RoleBadge({ role }: { role: string }) {
   }
 }
 
-/**
- * Modal que funciona tanto para criar quanto para editar.
- * - Se `userToEdit` for undefined -> modo "create" (POST /usuarios)
- * - Se definido -> modo "edit" (PUT /usuarios/{id})
- */
 function UserModal({
   open,
   onClose,
@@ -117,16 +112,11 @@ function UserModal({
     setLoading(true)
     try {
       if (isEdit && userToEdit) {
-        // PUT /usuarios/{id}
         const payload: any = { nome, email, role }
-        // only include senha if provided
         if (senha) payload.senha = senha
-
-        // turma handling: only meaningful for alunos. backend should accept null.
         if (role === "aluno") {
           payload.turma = turma === "" ? null : turma
         } else {
-          // ensure backend clears turma for non-alunos (if desired)
           payload.turma = null
         }
 
@@ -137,7 +127,6 @@ function UserModal({
         })
         onSaved(updated, false)
       } else {
-        // POST /usuarios
         const payload: any = { nome, email, role, senha }
         payload.turma = role === "aluno" ? (turma === "" ? null : turma) : null
 
@@ -184,7 +173,6 @@ function UserModal({
             </select>
           </div>
 
-          {/* turma: apenas quando role === 'aluno' */}
           {role === "aluno" && (
             <div>
               <label className="block text-sm font-medium text-gray-700">Turma (opcional)</label>
@@ -226,6 +214,7 @@ export default function UsuariosPage() {
   // filtros
   const [filterName, setFilterName] = useState("")
   const [filterRole, setFilterRole] = useState<"all" | "admin" | "professor" | "aluno">("all")
+  const [filterTurma, setFilterTurma] = useState<"all" | "semturma" | "python" | "webdev">("all")
 
   const role = (localStorage.getItem(USER_ROLE_KEY) || "aluno").toLowerCase()
   const isAdmin = role === "admin"
@@ -267,11 +256,30 @@ export default function UsuariosPage() {
   const filteredUsers = useMemo(() => {
     const name = filterName.trim().toLowerCase()
     return users.filter((u) => {
+      // role filter
       if (filterRole !== "all" && u.role !== filterRole) return false
+
+      // turma filter
+      if (filterTurma !== "all") {
+        if (filterTurma === "semturma") {
+          // keep only users with role 'aluno' and without turma
+          if (!(u.role === "aluno" && (!u.turma || String(u.turma).trim() === ""))) return false
+        } else {
+          // match specific turma case-insensitive
+          if (!u.turma || String(u.turma).trim().toLowerCase() !== filterTurma.toLowerCase()) return false
+        }
+      }
+
+      // name search
       if (name && !u.nome.toLowerCase().includes(name)) return false
+
       return true
     })
-  }, [users, filterName, filterRole])
+  }, [users, filterName, filterRole, filterTurma])
+
+  // contagem de resultados do filtro
+  const filteredCount = filteredUsers.length
+
 
   const handleSaved = (u: User, isNew: boolean) => {
     if (isNew) {
@@ -315,10 +323,13 @@ export default function UsuariosPage() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link to="/dashboard" className="text-sm text-gray-500 hover:underline">← Voltar para o dashboard</Link>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 mt-4">
-          <div>
+           <div>
             <h1 className="text-2xl font-bold">Usuários</h1>
-            <p className="text-sm text-gray-600">Lista de usuários do sistema</p>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-sm text-gray-600">Lista de usuários do sistema</p>
+            </div>
           </div>
+          
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
             {/* filtros: busca por nome */}
@@ -330,6 +341,21 @@ export default function UsuariosPage() {
                 className="w-full sm:w-64 px-3 py-2 border rounded"
                 aria-label="Buscar por nome"
               />
+            </div>
+
+            {/* filtro por turma */}
+            <div className="flex items-center gap-2">
+              <select
+                value={filterTurma}
+                onChange={(e) => setFilterTurma(e.target.value as any)}
+                className="px-3 py-2 border rounded"
+                aria-label="Filtrar por turma"
+              >
+                <option value="all">Todas turmas</option>
+                <option value="semturma">Sem turma (alunos)</option>
+                <option value="python">Python</option>
+                <option value="webdev">WebDev</option>
+              </select>
             </div>
 
             {/* filtro por role */}
@@ -362,6 +388,9 @@ export default function UsuariosPage() {
             </div>
           </div>
         </div>
+        <div className="text-sm text-gray-700 font-medium">
+          Mostrando {filteredCount} {filteredCount === 1 ? "usuário" : "usuários"}
+        </div>
 
         {/* estados */}
         {loading && <div className="p-6 bg-white rounded shadow">Carregando usuários...</div>}
@@ -381,10 +410,16 @@ export default function UsuariosPage() {
                   <h3 className="text-lg font-semibold">{capitalize(u.nome)}</h3>
                   <p className="text-sm text-gray-500">{u.email}</p>
                   <div className="mt-2 text-xs text-gray-400">ID: {u.id}</div>
+
                   {u.turma && (
-                    <div className="mt-2 text-sm text-gray-600">
+                    <div className="mt-4 text-sm text-gray-600">
                       <strong>Turma:</strong> {capitalize(u.turma)}
                     </div>
+                  )}
+
+                  {/* aviso em vermelho quando for aluno sem turma */}
+                  {u.role === "aluno" && (!u.turma || String(u.turma).trim() === "") && (
+                    <div className="mt-4 text-sm text-red-600 font-medium">Aluno sem turma!</div>
                   )}
                 </div>
 
@@ -416,7 +451,6 @@ export default function UsuariosPage() {
         )}
       </main>
 
-      {/* user modal (create/edit) */}
       <UserModal
         open={modalOpen}
         onClose={() => {
@@ -427,7 +461,6 @@ export default function UsuariosPage() {
         userToEdit={editingUser}
       />
 
-      {/* delete confirm */}
       {confirmDelete && (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmDelete(null)} />
