@@ -8,7 +8,7 @@ import { API_URL } from "../config"
 interface MeResponse {
   id: number
   nome: string
-  email: string
+  username: string
   role: string
 }
 
@@ -103,12 +103,13 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
               <input
-                type="email"
+                type="text"
                 className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#004AAD]"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                placeholder="ex: henrique01"
               />
             </div>
 
@@ -130,7 +131,11 @@ export default function Login() {
               {loading ? "Entrando…" : "Entrar"}
             </button>
 
-            {error && <p className="text-red-600 text-sm text-center">{error}</p>}
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm text-center font-medium">{error}</p>
+              </div>
+            )}
           </form>
         </motion.div>
       </div>

@@ -8,7 +8,7 @@ import { Link } from "react-router-dom"
 type User = {
   id: number
   nome: string
-  email: string
+  username: string
   role: "admin" | "professor" | "aluno" | string
   turma?: string | null
 }
@@ -66,7 +66,7 @@ function UserModal({
 }) {
   const isEdit = !!userToEdit
   const [nome, setNome] = useState("")
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [role, setRole] = useState<"admin" | "professor" | "aluno">("aluno")
   const [turma, setTurma] = useState<string>("") // only relevant for alunos ("" -> null)
   const [senha, setSenha] = useState("") // optional on edit
@@ -76,14 +76,14 @@ function UserModal({
   useEffect(() => {
     if (open && userToEdit) {
       setNome(userToEdit.nome || "")
-      setEmail(userToEdit.email || "")
+      setUsername(userToEdit.username || "")
       setRole((userToEdit.role as any) || "aluno")
       setTurma(userToEdit.turma ?? "")
       setSenha("") // leave blank
       setError(null)
     }
     if (!open && !userToEdit) {
-      setNome(""); setEmail(""); setRole("aluno"); setTurma(""); setSenha(""); setError(null)
+      setNome(""); setUsername(""); setRole("aluno"); setTurma(""); setSenha(""); setError(null)
     }
   }, [open, userToEdit])
 
@@ -92,8 +92,18 @@ function UserModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (!nome || !email) {
-      setError("Preencha nome e email.")
+    if (!nome || !username) {
+      setError("Preencha nome e username.")
+      return
+    }
+    // Validate username
+    if (username.length < 4) {
+      setError("Username deve ter no mínimo 4 caracteres.")
+      return
+    }
+    const digitCount = (username.match(/\d/g) || []).length
+    if (digitCount < 2) {
+      setError("Username deve conter pelo menos 2 dígitos (ex: henrique01).")
       return
     }
     if (!isEdit && !senha) {
@@ -112,7 +122,7 @@ function UserModal({
     setLoading(true)
     try {
       if (isEdit && userToEdit) {
-        const payload: any = { nome, email, role }
+        const payload: any = { nome, username, role }
         if (senha) payload.senha = senha
         if (role === "aluno") {
           payload.turma = turma === "" ? null : turma
@@ -127,7 +137,7 @@ function UserModal({
         })
         onSaved(updated, false)
       } else {
-        const payload: any = { nome, email, role, senha }
+        const payload: any = { nome, username, role, senha }
         payload.turma = role === "aluno" ? (turma === "" ? null : turma) : null
 
         const created: User = await fetchJsonWithAuth(`${API_URL}/usuarios`, {
@@ -152,7 +162,11 @@ function UserModal({
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative max-w-lg w-full bg-white rounded-lg shadow-lg p-6 z-10">
         <h2 className="text-lg font-semibold mb-4">{isEdit ? "Editar Usuário" : "Adicionar Usuário"}</h2>
-        {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700 text-sm font-medium">{error}</p>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700">Nome</label>
@@ -160,8 +174,15 @@ function UserModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className="mt-1 block w-full border rounded px-3 py-2" />
+            <label className="block text-sm font-medium text-gray-700">Username</label>
+            <input 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
+              type="text" 
+              className="mt-1 block w-full border rounded px-3 py-2" 
+              placeholder="ex: henrique01"
+            />
+            <div className="text-xs text-gray-400 mt-1">Mínimo 4 caracteres com pelo menos 2 dígitos</div>
           </div>
 
           <div>
@@ -408,7 +429,7 @@ export default function UsuariosPage() {
                 <RoleBadge role={u.role} />
                 <div>
                   <h3 className="text-lg font-semibold">{capitalize(u.nome)}</h3>
-                  <p className="text-sm text-gray-500">{u.email}</p>
+                  <p className="text-sm text-gray-500">@{u.username}</p>
                   <div className="mt-2 text-xs text-gray-400">ID: {u.id}</div>
 
                   {u.turma && (

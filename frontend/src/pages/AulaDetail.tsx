@@ -75,9 +75,11 @@ type ExercicioCreate = {
   ordem?: number
   alternativas?: AlternativaEditable[] | null
   alternativas_certas?: number[] | null
+  feedback_professor?: string | null
 }
 
 type AlternativaFromServer = { id?: number | string; texto: string; is_correta?: boolean }
+
 type ExercicioFromServer = {
   id: number
   titulo?: string | null
@@ -88,6 +90,7 @@ type ExercicioFromServer = {
   alternativas?: AlternativaFromServer[] | null
   correct_alternativas?: (number | string)[] | null
   ordem?: number
+  feedback_professor?: string | null
 }
 
 type BlocoFromServer = { id: number; titulo?: string | null; texto?: string | null; ordem?: number; imagem_url?: string | null;youtube_url?: string | null }
@@ -146,6 +149,32 @@ export default function AulaDetail() {
         const data: AulaOut = await fetchJsonWithAuth(`${API_URL}/aulas/${id}`)
         setAula(data)
 
+        // ===== inserir logo após setAula(data) dentro do useEffect =====
+        const userIdStr = localStorage.getItem("user_id")
+        const roleLocal = (localStorage.getItem(USER_ROLE_KEY) || "aluno").toLowerCase()
+
+        // Se for aluno, tentar carregar o desempenho mais recente (isso revela se já finalizou)
+        if (userIdStr && roleLocal !== "admin" && roleLocal !== "professor") {
+          ;(async () => {
+            try {
+              const alunoIdNum = Number(userIdStr)
+              const detalhe = await fetchJsonWithAuth(`${API_URL}/aulas/${data.id}/desempenho/${alunoIdNum}`)
+              // detalhe.finalizada, detalhe.pontuacao_total, detalhe.responses (com pontuacao_obtida)
+              setFinalized(Boolean(detalhe.finalizada))
+              setTotalScore(detalhe.pontuacao_total ?? null)
+
+              const newLast: Record<number, { pontuacao: number; mensagem?: string }> = {};
+              (detalhe.responses || []).forEach((r: any) => {
+                newLast[r.exercicio_id] = { pontuacao: r.pontuacao_obtida ?? 0, mensagem: r.acertou ? "Acertou" : "Errou" }
+              })
+              setLastResult(newLast)
+            } catch (e) {
+              // não crítico: se falhar, mantemos estado inicial (não finalizado)
+              console.warn("Não foi possível buscar desempenho do aluno:", e)
+            }
+          })()
+        }
+
         setBlocos(
           (data.blocos || []).map((b: BlocoFromServer, idx: number) => ({
             id: b.id,
@@ -181,6 +210,7 @@ export default function AulaDetail() {
               ordem: typeof e.ordem === "number" ? e.ordem : idx,
               alternativas: alts,
               alternativas_certas: alts.map((a, ai) => (a.is_correta ? ai : -1)).filter((n) => n >= 0),
+              feedback_professor: (e as any).feedback_professor ?? ""
             }
           })
         )
@@ -221,6 +251,7 @@ export default function AulaDetail() {
         ordem: prev.length,
         alternativas: type === "multiple_choice" ? [{ texto: "" }, { texto: "" }] : [],
         alternativas_certas: [],
+        feedback_professor: "",
       },
     ])
     setEditing(true)
@@ -301,6 +332,7 @@ export default function AulaDetail() {
             ordem: i,
             alternativas: alternativasObjs,
             alternativas_certas: corretasIndices,
+            feedback_professor: ex.feedback_professor ?? null,
           }
         }),
       }
@@ -655,6 +687,19 @@ export default function AulaDetail() {
                           </div>
                         </div>
 
+                        {/* Feedback geral do professor (visível a todos os alunos) */}
+                        <div className="mt-3">
+                          <label className="text-sm font-medium">Feedback esperado (visível a todos)</label>
+                          <textarea
+                            value={ex.feedback_professor ?? ""}
+                            onChange={(e) => updateExercicio(i, { feedback_professor: e.target.value })}
+                            placeholder="Explique o que era esperado nesta questão..."
+                            className="mt-1 block w-full border rounded px-3 py-2"
+                            rows={3}
+                          />
+                          <div className="text-xs text-gray-400 mt-1">Texto que será mostrado a todos os alunos como 'o que era esperado' para esta questão.</div>
+                        </div>
+
                         {ex.tipo === "text" && (
                           <div className="mt-2">
                             <label className="text-sm font-medium">Resposta modelo (opcional)</label>
@@ -742,6 +787,18 @@ export default function AulaDetail() {
                     <div key={ex.id} className="bg-white p-4 rounded shadow">
                       {ex.titulo && <div className="font-semibold">{ex.titulo}</div>}
                       <div className="mt-1 text-sm text-gray-700">{ex.enunciado}</div>
+                      {/* Mostrar feedback somente se:
+                          - usuário é professor/admin (sempre vê), OU
+                          - tentativa do aluno foi finalizada (finalized === true)
+                      */}
+                      {((isAdmin || isProfessor) || finalized) && (ex as any).feedback_professor ? (
+                        <div className="mt-3 p-3 bg-gray-50 border-l-4 border-gray-200 rounded">
+                          <div className="text-sm text-gray-700">
+                            <strong>Feedback do professor (o esperado):</strong>
+                            <div className="mt-1 whitespace-pre-wrap">{(ex as any).feedback_professor}</div>
+                          </div>
+                        </div>
+                      ) : null}
 
                       {ex.tipo === "multiple_choice" && ex.alternativas && (
                         <div className="mt-3 space-y-2">

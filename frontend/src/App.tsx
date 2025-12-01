@@ -5,6 +5,7 @@ import Usuarios from "./pages/Usuarios"
 import Aulas from "./pages/Aulas"
 import AulaDetail from "./pages/AulaDetail"
 import DesempenhoPage from "./pages/Desempenho"
+import MinhasRespostas from "./pages/MinhasRespostas"
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/aulas" element={<Aulas />} />
         <Route path="/aulas/:id" element={<AulaDetail />} />
         <Route path="/desempenho" element={<DesempenhoPage />} />
+        <Route path="/minhas-respostas" element={<MinhasRespostas />} />
       </Routes>
     </BrowserRouter>
   )

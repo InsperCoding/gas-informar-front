@@ -107,6 +107,17 @@ export default function Dashboard() {
               <Link to="/desempenho" className={btnClasses}>Ver Desempenho</Link>
             </div>
           )}
+
+          {/* Minhas Respostas — SOMENTE para alunos */}
+          {role === "aluno" && (
+            <div className={cardBaseClasses}>
+              <div>
+                <h3 className="text-lg font-semibold">Minhas Respostas</h3>
+                <p className="mt-2 text-sm text-gray-600">Veja suas respostas e desempenho em cada aula.</p>
+              </div>
+              <Link to="/minhas-respostas" className={btnClasses}>Ver Minhas Respostas</Link>
+            </div>
+          )}
         </section>
       </main>
     </div>
