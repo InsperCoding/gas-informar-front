@@ -1,5 +1,5 @@
 // src/pages/Desempenho.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Header from "../components/Header";
 import { fetchJsonWithAuth, getToken } from "../lib/fetchWithAuth";
 import { API_URL } from "../config";

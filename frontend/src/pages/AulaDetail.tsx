@@ -1,8 +1,8 @@
 // src/pages/AulaDetail.tsx
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import Header from "../components/Header"
-import { fetchJsonWithAuth, getToken } from "../lib/fetchWithAuth"
+import { fetchJsonWithAuth } from "../lib/fetchWithAuth"
 import { API_URL } from "../config"
 import { uploadImageFile } from "../utils/upload"
 
@@ -106,16 +106,6 @@ type AulaOut = {
   created_at?: string
 }
 
-type RespostaOut = {
-  id: number
-  exercicio_id: number
-  aluno_id: number
-  enviado_em: string
-  resposta_texto?: string | null
-  alternativa_id?: number | null
-  pontuacao: number
-}
-
 const USER_ROLE_KEY = "user_role"
 
 export default function AulaDetail() {
@@ -132,7 +122,6 @@ export default function AulaDetail() {
 
   const [selectedAlternative, setSelectedAlternative] = useState<Record<number, number | null>>({})
   const [answerText, setAnswerText] = useState<Record<number, string>>({})
-  const [submitting, setSubmitting] = useState<Record<number, boolean>>({})
   const [lastResult, setLastResult] = useState<Record<number, { pontuacao: number; mensagem?: string }>>({})
   const [finalized, setFinalized] = useState<boolean>(false)
   const [totalScore, setTotalScore] = useState<number | null>(null)
@@ -470,51 +459,7 @@ export default function AulaDetail() {
     }
   }
 
-  // responder exercício (envio único)
-  async function submitAnswer(exercicio_id: number) {
-    setSubmitting((s) => ({ ...s, [exercicio_id]: true }))
-    setError(null)
-    try {
-      const ex = (aula?.exercicios || []).find((e) => e.id === exercicio_id)
-      if (!ex) throw new Error("Exercício não encontrado")
-      if (ex.tipo === "multiple_choice") {
-        const altIndex = selectedAlternative[exercicio_id]
-        if (altIndex === undefined || altIndex === null) {
-          alert("Selecione uma alternativa.")
-          return
-        }
-        const alternativaObj = ex.alternativas ? ex.alternativas[altIndex] : undefined
-        if (!alternativaObj) throw new Error("Alternativa inválida")
-        const altIdNum = typeof (alternativaObj as any).id !== "undefined" && (alternativaObj as any).id !== null ? Number((alternativaObj as any).id) : null
-        if (altIdNum === null) throw new Error("Alternativa sem id no servidor")
-        const payload = { exercicio_id, alternativa_id: altIdNum }
-        const resp: RespostaOut = await fetchJsonWithAuth(`${API_URL}/aulas/responder`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-        setLastResult((r) => ({ ...r, [exercicio_id]: { pontuacao: resp.pontuacao, mensagem: `Pontuação: ${resp.pontuacao}` } }))
-      } else {
-        const texto = answerText[exercicio_id] ?? ""
-        if (!texto.trim()) {
-          alert("Escreva sua resposta antes de enviar.")
-          return
-        }
-        const payload = { exercicio_id, resposta_texto: texto }
-        const resp: RespostaOut = await fetchJsonWithAuth(`${API_URL}/aulas/responder`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-        setLastResult((r) => ({ ...r, [exercicio_id]: { pontuacao: resp.pontuacao, mensagem: `Pontuação: ${resp.pontuacao}` } }))
-      }
-    } catch (err: any) {
-      console.error(err)
-      alert(err?.message ?? "Erro ao enviar resposta")
-    } finally {
-      setSubmitting((s) => ({ ...s, [exercicio_id]: false }))
-    }
-  }
+
 
   if (loading) return <div className="p-8">Carregando...</div>
   if (error) return <div className="p-8 text-red-600">{error}</div>

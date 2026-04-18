@@ -1,6 +1,6 @@
 // src/pages/Aulas.tsx
 import React, { useEffect, useMemo, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import Header from "../components/Header"
 import { fetchJsonWithAuth, getToken } from "../lib/fetchWithAuth"
 import { API_URL } from "../config"
@@ -186,7 +186,7 @@ export default function AulasPage() {
   const isProfessor = role === "professor"
   const canEdit = isAdmin || isProfessor
 
-  const navigate = useNavigate()
+  // const navigate = useNavigate()
 
   const fetchAulas = async () => {
     setLoading(true)
