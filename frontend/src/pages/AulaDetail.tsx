@@ -642,6 +642,7 @@ export default function AulaDetail() {
                             placeholder="Explique o que era esperado nesta questão..."
                             className="mt-1 block w-full border rounded px-3 py-2"
                             rows={3}
+                            spellCheck={false}
                           />
                           <div className="text-xs text-gray-400 mt-1">Texto que será mostrado a todos os alunos como 'o que era esperado' para esta questão.</div>
                         </div>
@@ -718,7 +719,12 @@ export default function AulaDetail() {
                           </div>
                         </div>
                       )} */}
-                      {b.texto && <div className="mt-2 text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: b.texto ?? "" }} />}
+                      {b.texto && (
+                        <div
+                          className="mt-2 text-sm text-gray-700 whitespace-pre-line"
+                          dangerouslySetInnerHTML={{ __html: b.texto ?? "" }}
+                        />
+                      )}
                     </article>
                   ))}
                 </div>
@@ -789,6 +795,7 @@ export default function AulaDetail() {
                             onChange={(e) => setAnswerText((t) => ({ ...t, [ex.id]: e.target.value }))}
                             className="w-full border rounded px-3 py-2"
                             rows={4}
+                            spellCheck={false}
                           />
                           <div className="mt-2 text-sm text-gray-400">
                             Sua resposta será enviada quando você clicar em <strong>Enviar tudo</strong>.
